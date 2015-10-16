@@ -82,10 +82,10 @@ find_properties(State, Dir, Mods, Props) ->
     %% Need to compile somewhere in there
     Dirs = [{App, TestDir}
             || App <- rebar_state:project_apps(State),
-                      not rebar_app_info:is_checkout(App),
-                      TestDir <- [filename:join(rebar_app_info:dir(App), Dir)],
-                      {ok, Files} <- [file:list_dir(TestDir)],
-                      lists:any(fun(File) -> prop_suite(Mods, File) end, Files)],
+               not rebar_app_info:is_checkout(App),
+               TestDir <- [filename:join(rebar_app_info:dir(App), Dir)],
+               {ok, Files} <- [file:list_dir(TestDir)],
+               lists:any(fun(File) -> prop_suite(Mods, File) end, Files)],
     compile_dirs(State, Dir, Dirs),
     [Prop || {_, TestDir} <- Dirs,
              {ok, Files} <- [file:list_dir(TestDir)],
