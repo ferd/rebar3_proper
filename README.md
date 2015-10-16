@@ -19,8 +19,17 @@ Use
 
 Add the plugin to your rebar config:
 
+    %% the plugin itself
     {plugins, [
         { rebar3_proper, ".*", {git, "https://github.com/ferd/rebar3_proper.git", {tag, "0.1.0"}}}
+    ]}.
+    %% The PropEr dependency is still required to compile the test cases
+    {profiles,
+        [{test, [
+            {deps, [
+                {proper, {git, "https://github.com/manopapad/proper.git", {branch, "master"}}}
+            ]}
+        ]}
     ]}.
 
 Then just call your plugin directly in an existing application:
