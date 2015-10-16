@@ -1,0 +1,16 @@
+{application, 'rebar3_proper',
+ [{description, "Run PropEr test suites"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib,
+    proper
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {contributors, []},
+  {licenses, []},
+  {links, []}
+ ]}.
