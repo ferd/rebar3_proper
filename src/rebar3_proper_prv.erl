@@ -33,20 +33,20 @@ do(State) ->
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps)),
     %% TODO handle coverage
     Props = find_properties(State, Opts),
-    Results = [{Mod, Fun, check(Mod, Fun, ProperOpts)} || {Mod, Fun} <- Props],
+    Results = [{Mod, Fun, catch check(Mod, Fun, ProperOpts)} || {Mod, Fun} <- Props],
     rebar_api:debug("Results: ~p", [Results]),
     rebar_utils:cleanup_code_path(rebar_state:code_paths(State, default)),
     Failed = [{M,F,Res} || {M,F,Res} <- Results, Res =/= true],
     case Failed of
         [] ->
             Tot = length(Results),
-            rebar_api:info("~p/~p properties passed", [Tot, Tot]),
+            rebar_api:info("~n~p/~p properties passed", [Tot, Tot]),
             {ok, State};
         [_|_] ->
             Tot = length(Results),
             FailedCount = length(Failed),
             Passed = Tot - FailedCount,
-            rebar_api:error("~p/~p properties passed, ~p failed", [Passed, Tot, FailedCount]),
+            rebar_api:error("~n~p/~p properties passed, ~p failed", [Passed, Tot, FailedCount]),
             ?PRV_ERROR({failed, Failed})
     end.
 
