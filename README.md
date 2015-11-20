@@ -21,7 +21,7 @@ Add the plugin to your rebar config:
 
     %% the plugin itself
     {plugins, [
-        { rebar3_proper, ".*", {git, "https://github.com/ferd/rebar3_proper.git", {tag, "0.1.0"}}}
+         { rebar3_proper, ".*", {git, "https://github.com/ferd/rebar3_proper.git", {tag, "0.2.0"}}}
     ]}.
     %% The PropEr dependency is still required to compile the test cases
     {profiles,
@@ -70,3 +70,10 @@ Then just call your plugin directly in an existing application:
 
 All of [PropEr's standard configurations](http://proper.softlab.ntua.gr/doc/proper.html#Options)
 that can be put in a consult file can be put in `{proper_opts, [Options]}.` in your rebar.config file.
+
+
+Changelog
+----
+
+0.2.0 - basic functionality
+0.1.0 - first commits
