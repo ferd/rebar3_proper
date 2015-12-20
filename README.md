@@ -10,7 +10,6 @@ directories of a rebar3 project, and running all properties (functions of arity
 Todo/Gotchas
 ----
 
-- Code coverage is not supported yet.
 - The plugin still relies on the `master` branch of proper.
 - No tests yet
 
@@ -35,7 +34,7 @@ Add the plugin to your rebar config:
 Then just call your plugin directly in an existing application:
 
     Usage: rebar3 proper [-d <dir>] [-m <module>] [-p <properties>]
-                         [-n <numtests>] [-v <verbose>]
+                         [-n <numtests>] [-v <verbose>] [-c [<cover>]]
                          [--long_result <long_result>]
                          [--start_size <start_size>] [--max_size <max_size>]
                          [--max_shrinks <max_shrinks>]
@@ -52,6 +51,7 @@ Then just call your plugin directly in an existing application:
       -n, --numtests      number of tests to run when testing a given property
       -v, --verbose       each propertie tested shows its output or not
                           (defaults to true)
+      -c, --cover         generate cover data [default: false]
       --long_result       enables long-result mode, displaying
                           counter-examples on failure rather than just false
       --start_size        specifies the initial value of the size parameter
@@ -75,5 +75,6 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
+0.3.0 - code coverage supported
 0.2.0 - basic functionality
 0.1.0 - first commits

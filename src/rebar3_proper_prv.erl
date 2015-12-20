@@ -30,11 +30,12 @@ do(State) ->
     {Opts, ProperOpts} = handle_opts(State),
     rebar_api:debug("rebar3 proper options: ~p", [Opts]),
     rebar_api:debug("proper-specific options: ~p", [ProperOpts]),
-    rebar_utils:update_code(rebar_state:code_paths(State, all_deps)),
-    %% TODO handle coverage
+    rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
+    maybe_cover_compile(State),
     Props = find_properties(State, Opts),
     Results = [{Mod, Fun, catch check(Mod, Fun, ProperOpts)} || {Mod, Fun} <- Props],
     rebar_api:debug("Results: ~p", [Results]),
+    maybe_write_coverdata(State),
     rebar_utils:cleanup_code_path(rebar_state:code_paths(State, default)),
     Failed = [{M,F,Res} || {M,F,Res} <- Results, Res =/= true],
     case Failed of
@@ -61,6 +62,22 @@ format_error(Reason) ->
 %% ===================================================================
 %% Private
 %% ===================================================================
+maybe_cover_compile(State) ->
+    {RawOpts, _} = rebar_state:command_parsed_args(State),
+    State1 = case proplists:get_value(cover, RawOpts, false) of
+                 true  -> rebar_state:set(State, cover_enabled, true);
+                 false -> State
+             end,
+    rebar_prv_cover:maybe_cover_compile(State1).
+
+maybe_write_coverdata(State) ->
+    {RawOpts, _} = rebar_state:command_parsed_args(State),
+    State1 = case proplists:get_value(cover, RawOpts, false) of
+                 true  -> rebar_state:set(State, cover_enabled, true);
+                 false -> State
+             end,
+    rebar_prv_cover:maybe_write_coverdata(State1, ?PROVIDER).
+
 check(Mod, Fun, Opts) ->
     rebar_api:info("Testing ~p:~p()", [Mod, Fun]),
     proper:quickcheck(Mod:Fun(), Opts).
@@ -145,7 +162,9 @@ proper_opts() ->
      {numtests, $n, "numtests", integer,
       "number of tests to run when testing a given property"},
      {verbose, $v, "verbose", boolean,
-      "each propertie tested shows its output or not (defaults to true)"},
+      "each property tested shows its output or not (defaults to true)"},
+     {cover, $c, "cover", {boolean, false},
+      "generate cover data"},
      %% no short format for these buddies
      {long_result, undefined, "long_result", boolean,
       "enables long-result mode, displaying counter-examples on failure "
@@ -201,6 +220,7 @@ proper_opts([{any_to_integer, false} | T]) -> proper_opts(T);
 proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
 proper_opts([{properties,_} | T]) -> proper_opts(T);
+proper_opts([{cover,_} | T]) -> proper_opts(T);
 %% fall-through
 proper_opts([H|T]) -> [H | proper_opts(T)].
 
