@@ -75,6 +75,7 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
+0.4.0 - switches license to BSD with templates
 0.3.0 - code coverage supported
 0.2.0 - basic functionality
 0.1.0 - first commits
