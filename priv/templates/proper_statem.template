@@ -1,0 +1,8 @@
+{description, "Template for a statem PropEr suite"}.
+{variables, [
+    {name, "Name of the suite (prop_<name>, model_<name>)"},
+    {test_dir, "test", "The directory where the test suite goes"}
+]}.
+{template, "prop_statem.erl.tpl", "{{test_dir}}/prop_{{name}}.erl"}.
+{template, "prop_model.erl.tpl", "{{test_dir}}/model_{{name}}.erl"}.
+

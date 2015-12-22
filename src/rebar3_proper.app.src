@@ -11,7 +11,7 @@
   {modules, []},
 
   {contributors, ["Fred Hebert"]},
-  {licenses, ["GPLv3"]},
+  {licenses, ["BSD"]},
   {links, [{"Github", "https://github.com/ferd/rebar3_proper"},
            {"PropEr", "http://proper.softlab.ntua.gr/"}]}
  ]}.
