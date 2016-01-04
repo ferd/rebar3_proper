@@ -19,15 +19,11 @@ Use
 Add the plugin to your rebar config:
 
     %% the plugin itself
-    {plugins, [
-         { rebar3_proper, ".*", {git, "https://github.com/ferd/rebar3_proper.git", {tag, "0.2.0"}}}
-    ]}.
+    {plugins, [rebar3_proper]}.
     %% The PropEr dependency is still required to compile the test cases
     {profiles,
         [{test, [
-            {deps, [
-                {proper, {git, "https://github.com/manopapad/proper.git", {branch, "master"}}}
-            ]}
+            {deps, [{proper, "1.1.1-beta"}]}
         ]}
     ]}.
 
@@ -75,6 +71,7 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
+0.5.0 - switches to package dependencies
 0.4.0 - switches license to BSD with templates
 0.3.0 - code coverage supported
 0.2.0 - basic functionality
