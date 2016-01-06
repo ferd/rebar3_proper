@@ -10,7 +10,7 @@ directories of a rebar3 project, and running all properties (functions of arity
 Todo/Gotchas
 ----
 
-- The plugin still relies on the `master` branch of proper.
+- The plugin relies on the `1.1.1-beta` hex package of proper.
 - No tests yet
 
 Use
