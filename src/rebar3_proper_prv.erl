@@ -85,16 +85,9 @@ check(Mod, Fun, Opts) ->
 
 find_properties(State, Opts) ->
     Dir = proplists:get_value(dir, Opts, "test"),
-    case {proplists:get_value(module, Opts), proplists:get_value(properties, Opts)} of
-        {undefined, undefined} ->
-            find_properties(State, Dir, any, any);
-        {Mods, undefined} ->
-            find_properties(State, Dir, Mods, any);
-        {undefined, Props} ->
-            find_properties(State, Dir, any, Props);
-        {Mods, Props} ->
-            find_properties(State, Dir, Mods, Props)
-    end.
+    Mods = proplists:get_value(module, Opts, any),
+    Props = proplists:get_value(properties, Opts, any),
+    find_properties(State, Dir, Mods, Props).
 
 find_properties(State, Dir, Mods, Props) ->
     %% Need to compile somewhere in there
