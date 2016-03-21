@@ -33,23 +33,29 @@ do(State) ->
     rebar_api:debug("proper-specific options: ~p", [ProperOpts]),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
     maybe_cover_compile(State),
-    Props = find_properties(State, Opts),
-    Results = [{Mod, Fun, catch check(Mod, Fun, ProperOpts)} || {Mod, Fun} <- Props],
-    rebar_api:debug("Results: ~p", [Results]),
-    maybe_write_coverdata(State),
-    rebar_utils:cleanup_code_path(rebar_state:code_paths(State, default)),
-    Failed = [{M,F,Res} || {M,F,Res} <- Results, Res =/= true],
-    case Failed of
-        [] ->
-            Tot = length(Results),
-            rebar_api:info("~n~p/~p properties passed", [Tot, Tot]),
-            {ok, State};
-        [_|_] ->
-            Tot = length(Results),
-            FailedCount = length(Failed),
-            Passed = Tot - FailedCount,
-            rebar_api:error("~n~p/~p properties passed, ~p failed", [Passed, Tot, FailedCount]),
-            ?PRV_ERROR({failed, Failed})
+    try find_properties(State, Opts) of
+        Props ->
+            rebar_api:debug("Props: ~p", [Props]),
+            Results = [{Mod, Fun, catch check(Mod, Fun, ProperOpts)} || {Mod, Fun} <- Props],
+            rebar_api:debug("Results: ~p", [Results]),
+            maybe_write_coverdata(State),
+            rebar_utils:cleanup_code_path(rebar_state:code_paths(State, default)),
+            Failed = [{M,F,Res} || {M,F,Res} <- Results, Res =/= true],
+            case Failed of
+                [] ->
+                    Tot = length(Results),
+                    rebar_api:info("~n~p/~p properties passed", [Tot, Tot]),
+                    {ok, State};
+                [_|_] ->
+                    Tot = length(Results),
+                    FailedCount = length(Failed),
+                    Passed = Tot - FailedCount,
+                    rebar_api:error("~n~p/~p properties passed, ~p failed", [Passed, Tot, FailedCount]),
+                    ?PRV_ERROR({failed, Failed})
+            end
+    catch
+        throw:{module_not_found,_Mod,_Props}=Error -> ?PRV_ERROR(Error);
+        throw:{property_not_found,_Prop,_Mods}=Error -> ?PRV_ERROR(Error)
     end.
 
 
@@ -57,6 +63,14 @@ do(State) ->
 format_error({failed, Failed}) ->
     ["Failed test cases:",
      [io_lib:format("~n  ~p:~p() -> ~p", [M,F,Res]) || {M,F,Res} <- Failed]];
+format_error({module_not_found, Mod, any}) ->
+    io_lib:format("Module ~p does not exist or exports no properties", [Mod]);
+format_error({module_not_found, Mod, _}) ->
+    io_lib:format("Module ~p does not exist", [Mod]);
+format_error({property_not_found, Prop, []}) ->
+    io_lib:format("Property ~p does not belong to any module", [Prop]);
+format_error({property_not_found, Prop, Mods}) ->
+    io_lib:format("Property ~p does not belong to any module in ~p", [Prop, Mods]);
 format_error(Reason) ->
     io_lib:format("~p", [Reason]).
 
@@ -87,9 +101,23 @@ find_properties(State, Opts) ->
     Dir = proplists:get_value(dir, Opts, "test"),
     Mods = proplists:get_value(module, Opts, any),
     Props = proplists:get_value(properties, Opts, any),
-    find_properties(State, Dir, Mods, Props).
+    Found = find_properties(State, Dir, Mods, Props),
+    rebar_api:debug("Found: ~p", [Found]),
+    {ModsFound0, PropsFound0} = lists:unzip(Found),
+    ModsFound = [atom_to_list(Mod) || Mod <- ModsFound0],
+    PropsFound = [atom_to_list(Prop) || Prop <- PropsFound0],
+    Props =/= any andalso
+        [throw({property_not_found, Prop, Mods})
+         || Prop <- Props, not lists:member(Prop, PropsFound)],
+    Mods =/= any andalso
+        [throw({module_not_found, Mod, Props})
+         || Mod <- Mods, not lists:member(Mod, ModsFound)],
+    Found.
 
 find_properties(State, Dir, Mods, Props) ->
+    rebar_api:debug("Dir: ~p", [Dir]),
+    rebar_api:debug("Mods: ~p", [Mods]),
+    rebar_api:debug("Props: ~p", [Props]),
     %% Need to compile somewhere in there
     Dirs = [{App, TestDir}
             || App <- rebar_state:project_apps(State),
