@@ -243,9 +243,10 @@ proper_opts([{any_to_integer, false} | T]) -> proper_opts(T);
 proper_opts([{on_output, {Mod, Fun}} | T]) ->
     [{on_output, fun Mod:Fun/2} | proper_opts(T)];
 proper_opts([{on_output, MFStr} | T]) when is_list(MFStr) ->
-    {ok, Tokens, _}  = erl_scan:string(MFStr++"."),
-    {ok, {Mod, Fun}} = erl_parse:parse_term(Tokens),
-    [{on_output, {Mod, Fun}} | proper_opts(T)];
+    case on_output(MFStr) of
+        undefined -> proper_opts(T);
+        Fun       -> [{on_output, Fun} | proper_opts(T)]
+    end;
 %% those are rebar3-only options
 proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
@@ -259,3 +260,15 @@ merge_opts(Old, New) ->
 
 parse_csv(IoData) ->
     re:split(IoData, ", *", [{return, list}]).
+
+-spec on_output(MFStr :: string()) -> 'undefined' | Fun when
+      Fun :: fun((Format :: io:format(), Data :: [term()]) -> ok).
+on_output(MFStr) ->
+    case erl_scan:string(MFStr ++ ".") of
+        {ok, Tokens, _EndLocation} ->
+            case erl_parse:parse_term(Tokens) of
+                {ok, {Mod, Fun}} -> fun Mod:Fun/2;
+                _                -> undefined
+            end;
+        _ -> undefined
+    end.
