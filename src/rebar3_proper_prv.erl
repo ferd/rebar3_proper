@@ -208,7 +208,10 @@ proper_opts() ->
       "to be failing"},
      {any_to_integer, undefined, "any_to_integer", boolean,
       "converts instances of the any() type to integers in order to speed "
-      "up execution"}
+      "up execution"},
+     {on_output, undefined, "on_output", string,
+      "specifies a binary function '{Mod,Fun}', similar to io:format/2, "
+      "to be used for all output printing"}
     ].
 
 handle_opts(State) ->
@@ -237,6 +240,12 @@ proper_opts([{noshrink, true} | T]) -> [noshrink | proper_opts(T)];
 proper_opts([{noshrink, false} | T]) -> proper_opts(T);
 proper_opts([{any_to_integer, true} | T]) -> [any_to_integer | proper_opts(T)];
 proper_opts([{any_to_integer, false} | T]) -> proper_opts(T);
+proper_opts([{on_output, {Mod, Fun}} | T]) ->
+    [{on_output, fun Mod:Fun/2} | proper_opts(T)];
+proper_opts([{on_output, MFStr} | T]) when is_list(MFStr) ->
+    {ok, Tokens, _}  = erl_scan:string(MFStr++"."),
+    {ok, {Mod, Fun}} = erl_parse:parse_term(Tokens),
+    [{on_output, {Mod, Fun}} | proper_opts(T)];
 %% those are rebar3-only options
 proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
