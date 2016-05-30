@@ -208,7 +208,10 @@ proper_opts() ->
       "to be failing"},
      {any_to_integer, undefined, "any_to_integer", boolean,
       "converts instances of the any() type to integers in order to speed "
-      "up execution"}
+      "up execution"},
+     {on_output, undefined, "on_output", string,
+      "specifies a binary function '{Mod,Fun}', similar to io:format/2, "
+      "to be used for all output printing"}
     ].
 
 handle_opts(State) ->
@@ -237,6 +240,13 @@ proper_opts([{noshrink, true} | T]) -> [noshrink | proper_opts(T)];
 proper_opts([{noshrink, false} | T]) -> proper_opts(T);
 proper_opts([{any_to_integer, true} | T]) -> [any_to_integer | proper_opts(T)];
 proper_opts([{any_to_integer, false} | T]) -> proper_opts(T);
+proper_opts([{on_output, {Mod, Fun}} | T]) ->
+    [{on_output, fun Mod:Fun/2} | proper_opts(T)];
+proper_opts([{on_output, MFStr} | T]) when is_list(MFStr) ->
+    case on_output(MFStr) of
+        undefined -> proper_opts(T);
+        Fun       -> [{on_output, Fun} | proper_opts(T)]
+    end;
 %% those are rebar3-only options
 proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
@@ -250,3 +260,15 @@ merge_opts(Old, New) ->
 
 parse_csv(IoData) ->
     re:split(IoData, ", *", [{return, list}]).
+
+-spec on_output(MFStr :: string()) -> 'undefined' | Fun when
+      Fun :: fun((Format :: io:format(), Data :: [term()]) -> ok).
+on_output(MFStr) ->
+    case erl_scan:string(MFStr ++ ".") of
+        {ok, Tokens, _EndLocation} ->
+            case erl_parse:parse_term(Tokens) of
+                {ok, {Mod, Fun}} -> fun Mod:Fun/2;
+                _                -> undefined
+            end;
+        _ -> undefined
+    end.
