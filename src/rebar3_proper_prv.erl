@@ -225,9 +225,9 @@ rebar3_opts([]) ->
 rebar3_opts([{dir, Dir} | T]) ->
     [{dir, Dir} | rebar3_opts(T)];
 rebar3_opts([{module, Mods} | T]) ->
-    [{module, parse_csv(Mods)} | rebar3_opts(T)];
+    [{module, maybe_parse_csv(Mods)} | rebar3_opts(T)];
 rebar3_opts([{properties, Props} | T]) ->
-    [{properties, parse_csv(Props)} | rebar3_opts(T)];
+    [{properties, maybe_parse_csv(Props)} | rebar3_opts(T)];
 rebar3_opts([_ | T]) ->
     rebar3_opts(T).
 
@@ -257,6 +257,16 @@ proper_opts([H|T]) -> [H | proper_opts(T)].
 
 merge_opts(Old, New) ->
     rebar_utils:tup_umerge(New, Old).
+
+maybe_parse_csv(Data) ->
+    case is_atom_list(Data) of
+        true -> [atom_to_list(D) || D <- Data];
+        false -> parse_csv(Data)
+    end.
+
+is_atom_list([]) -> true;
+is_atom_list([H|T]) when is_atom(H) -> is_atom_list(T);
+is_atom_list(_) -> false.
 
 parse_csv(IoData) ->
     re:split(IoData, ", *", [{return, list}]).
