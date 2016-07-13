@@ -71,6 +71,7 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
+- 0.6.2: fix bug with cover-compiling in rebar 3.2.0 and above
 - 0.6.1: fix bug on option parsing in config files
 - 0.5.0: switches to package dependencies
 - 0.4.0: switches license to BSD with templates

@@ -32,6 +32,8 @@ do(State) ->
     rebar_api:debug("proper-specific options: ~p", [ProperOpts]),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
     maybe_cover_compile(State),
+    %% needed in 3.2.0 and after
+    rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
     try find_properties(State, Opts) of
         Props ->
             rebar_api:debug("Props: ~p", [Props]),
