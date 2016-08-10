@@ -32,8 +32,16 @@ do(State) ->
     rebar_api:debug("proper-specific options: ~p", [ProperOpts]),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
     maybe_cover_compile(State),
-    %% needed in 3.2.0 and after
-    rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
+    %% needed in 3.2.0 and after -- this reloads the code paths required to
+    %% compile everything *after* cover-compiling has cleaned up after itself
+    %% (which incidentally clears up *our* environment too), but skips reloading
+    %% the top level apps' own code paths since those would overwrite the cover-
+    %% compiled code sitting in memory. The top app's path is readded to the
+    %% code path but not pre-loaded in memory, though.
+    TopAppsPaths = app_paths(State),
+    rebar_utils:update_code(rebar_state:code_paths(State, all_deps)--TopAppsPaths, [soft_purge]),
+    code:add_patha(TopAppsPaths),
+    %% And now we can compile.
     try find_properties(State, Opts) of
         Props ->
             rebar_api:debug("Props: ~p", [Props]),
@@ -284,3 +292,8 @@ on_output(MFStr) ->
             end;
         _ -> undefined
     end.
+
+app_paths(State) ->
+    Apps = rebar_state:project_apps(State),
+    [rebar_app_info:ebin_dir(App) || App <- Apps,
+                                     not rebar_app_info:is_checkout(App)].
