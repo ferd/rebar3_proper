@@ -181,7 +181,20 @@ compile(State, Src, Out) ->
     NewOpts = lists:foldl(fun({K, V}, Dict) -> rebar_opts:set(Dict, K, V) end,
                           rebar_state:opts(State),
                           [{src_dirs, ["."]}]),
-    rebar_erlc_compiler:compile(NewOpts, Src, ec_cnv:to_list(Out)).
+    IncludeOpts = add_includes(NewOpts, State),
+    rebar_erlc_compiler:compile(IncludeOpts, Src, ec_cnv:to_list(Out)).
+
+add_includes(NewOpts, State) ->
+    Includes = lists:flatmap(fun app_includes/1, rebar_state:project_apps(State)),
+    dict:append_list(erl_opts, Includes, NewOpts).
+
+app_includes(App) ->
+    Opts = rebar_app_info:opts(App),
+    Dir = rebar_app_info:dir(App),
+    [{i, filename:join(Dir, Src)} || Src <- rebar_dir:src_dirs(Opts, ["src"])]
+    ++
+    [{i, filename:join(Dir, "include")},
+     {i, Dir}]. % not sure for that one, but mimics the rebar3_erlc_compiler
 
 proper_opts() ->
     [{dir, $d, "dir", string,
