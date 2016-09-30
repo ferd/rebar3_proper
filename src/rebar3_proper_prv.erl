@@ -191,7 +191,7 @@ add_includes(NewOpts, State) ->
 app_includes(App) ->
     Opts = rebar_app_info:opts(App),
     Dir = rebar_app_info:dir(App),
-    [{i, filename:join(Dir, Src)} || Src <- rebar_dir:src_dirs(Opts, ["src"])]
+    [{i, filename:join(Dir, Src)} || Src <- rebar_dir:all_src_dirs(Opts, ["src"], [])]
     ++
     [{i, filename:join(Dir, "include")},
      {i, Dir}]. % not sure for that one, but mimics the rebar3_erlc_compiler
