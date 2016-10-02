@@ -71,6 +71,9 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
+Pending release:
+- fix bug with include paths of hrl files from parent apps
+
 - 0.6.3: fix bug with cover-compiling in rebar 3.2.0 and above again
 - 0.6.2: fix bug with cover-compiling in rebar 3.2.0 and above
 - 0.6.1: fix bug on option parsing in config files
