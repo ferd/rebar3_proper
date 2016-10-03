@@ -5,6 +5,7 @@
 -define(PROVIDER, proper).
 -define(DEPS, [compile]).
 -define(PRV_ERROR(Reason), {error, {?MODULE, Reason}}).
+-define(COUNTEREXAMPLE_FILE, "rebar3_proper-counterexamples.consult").
 
 %% ===================================================================
 %% Public API
@@ -41,25 +42,81 @@ do(State) ->
     TopAppsPaths = app_paths(State),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps)--TopAppsPaths, [soft_purge]),
     code:add_patha(TopAppsPaths),
-    %% And now we can compile.
+    case run_type(Opts) of
+        quickcheck -> do_quickcheck(State, Opts, ProperOpts);
+        retry -> do_retry(State, Opts, ProperOpts)
+    end.
+
+run_type(Opts) ->
+    case proplists:get_value(retry, Opts, false) of
+        false -> quickcheck;
+        true -> retry
+    end.
+
+do_quickcheck(State, Opts, ProperOpts) ->
     try find_properties(State, Opts) of
         Props ->
             rebar_api:debug("Props: ~p", [Props]),
-            Results = [{Mod, Fun, catch check(Mod, Fun, ProperOpts)} || {Mod, Fun} <- Props],
-            rebar_api:debug("Results: ~p", [Results]),
+            Failed = [{Mod, Fun, Res, proper:counterexample()}
+                      || {Mod, Fun} <- Props,
+                         Res <- [catch check(Mod, Fun, ProperOpts)],
+                         Res =/= true],
+            rebar_api:debug("Failing Results: ~p", [Failed]),
             maybe_write_coverdata(State),
             rebar_utils:cleanup_code_path(rebar_state:code_paths(State, default)),
-            Failed = [{M,F,Res} || {M,F,Res} <- Results, Res =/= true],
             case Failed of
                 [] ->
-                    Tot = length(Results),
+                    Tot = length(Props),
                     rebar_api:info("~n~p/~p properties passed", [Tot, Tot]),
                     {ok, State};
                 [_|_] ->
-                    Tot = length(Results),
+                    Tot = length(Props),
                     FailedCount = length(Failed),
                     Passed = Tot - FailedCount,
                     rebar_api:error("~n~p/~p properties passed, ~p failed", [Passed, Tot, FailedCount]),
+                    store_counterexamples(State, Failed),
+                    ?PRV_ERROR({failed, Failed})
+            end
+    catch
+        throw:{module_not_found,_Mod,_Props}=Error -> ?PRV_ERROR(Error);
+        throw:{property_not_found,_Prop,_Mods}=Error -> ?PRV_ERROR(Error)
+    end.
+
+do_retry(State, Opts, ProperOpts) ->
+    Base = rebar_dir:base_dir(State),
+    FilePath = filename:join([Base, ?COUNTEREXAMPLE_FILE]),
+    case file:consult(FilePath) of
+        {ok, Data} ->
+            run_retries(State, Opts, ProperOpts, Data);
+        {error, _} ->
+            rebar_api:info("no counterexamples to run.", []),
+            {ok, State}
+    end.
+
+run_retries(State, Opts, ProperOpts, CounterExamples) ->
+    Dir = proplists:get_value(dir, Opts, "test"),
+    {Mods, Props} = lists:unzip([{atom_to_list(M), atom_to_list(F)}
+                                   || {M, F, _Args} <- CounterExamples]),
+    try find_properties(State, Dir, Mods, Props) of
+        Found ->
+            ExpectedLen = length(CounterExamples),
+            FoundLen = length(Found),
+            rebar_api:info("Running ~p found counterexamples out of ~p stored entries",
+                           [FoundLen, ExpectedLen]),
+            Failed = [{M, F, Result, Args}
+                      || {M,F,Args} <- CounterExamples,
+                         lists:member({M,F}, Found),
+                         Result <- [catch retry(M, F, Args, ProperOpts)],
+                         Result =/= true],
+            FailedCount = length(Failed),
+            Passed = FoundLen - FailedCount,
+            case Failed of
+                [] ->
+                    rebar_api:info("~n~p/~p counterexamples passed", [Passed, FoundLen]),
+                    {ok, State};
+                [_|_] ->
+                    rebar_api:error("~n~p/~p counterexamples passed, ~p failed",
+                                    [Passed, FoundLen, FailedCount]),
                     ?PRV_ERROR({failed, Failed})
             end
     catch
@@ -68,10 +125,11 @@ do(State) ->
     end.
 
 
+
 -spec format_error(any()) ->  iolist().
 format_error({failed, Failed}) ->
     ["Failed test cases:",
-     [io_lib:format("~n  ~p:~p() -> ~p", [M,F,Res]) || {M,F,Res} <- Failed]];
+     [io_lib:format("~n  ~p:~p() -> ~p", [M,F,Res]) || {M,F,Res,_} <- Failed]];
 format_error({module_not_found, Mod, any}) ->
     io_lib:format("Module ~p does not exist or exports no properties", [Mod]);
 format_error({module_not_found, Mod, _}) ->
@@ -105,6 +163,20 @@ maybe_write_coverdata(State) ->
 check(Mod, Fun, Opts) ->
     rebar_api:info("Testing ~p:~p()", [Mod, Fun]),
     proper:quickcheck(Mod:Fun(), Opts).
+
+retry(Mod, Fun, Args, Opts) ->
+    rebar_api:info("Retrying ~p:~p()", [Mod, Fun]),
+    proper:check(Mod:Fun(), Args, Opts).
+
+store_counterexamples(State, Failed) ->
+    Base = rebar_dir:base_dir(State),
+    FilePath = filename:join([Base, ?COUNTEREXAMPLE_FILE]),
+    {ok, Io} = file:open(FilePath, [write]),
+    rebar_api:debug("Writing counterexamples to ~s", [FilePath]),
+    %% Then run as proper:check(Mod:Fun(), CounterEx)
+    [io:format(Io, "~p.~n", [{Mod,Fun,CounterEx}]) || {Mod,Fun,_,CounterEx} <- Failed],
+    file:close(Io),
+    ok.
 
 find_properties(State, Opts) ->
     Dir = proplists:get_value(dir, Opts, "test"),
@@ -210,6 +282,9 @@ proper_opts() ->
      {cover, $c, "cover", {boolean, false},
       "generate cover data"},
      %% no short format for these buddies
+     {retry, undefined, "retry", {boolean, false},
+      "If failing test case counterexamples have been stored, "
+      "they are retried"},
      {long_result, undefined, "long_result", boolean,
       "enables long-result mode, displaying counter-examples on failure "
       "rather than just false"},
@@ -251,6 +326,8 @@ rebar3_opts([{module, Mods} | T]) ->
     [{module, maybe_parse_csv(Mods)} | rebar3_opts(T)];
 rebar3_opts([{properties, Props} | T]) ->
     [{properties, maybe_parse_csv(Props)} | rebar3_opts(T)];
+rebar3_opts([{retry, Retry} | T]) ->
+    [{retry, Retry} | rebar3_opts(T)];
 rebar3_opts([_ | T]) ->
     rebar3_opts(T).
 
@@ -275,6 +352,7 @@ proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
 proper_opts([{properties,_} | T]) -> proper_opts(T);
 proper_opts([{cover,_} | T]) -> proper_opts(T);
+proper_opts([{retry,_} | T]) -> proper_opts(T);
 %% fall-through
 proper_opts([H|T]) -> [H | proper_opts(T)].
 
