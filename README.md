@@ -48,6 +48,8 @@ Then just call your plugin directly in an existing application:
       -v, --verbose       each propertie tested shows its output or not
                           (defaults to true)
       -c, --cover         generate cover data [default: false]
+      --retry             If failing test case counterexamples have been
+                          stored, they are retried [default: false]
       --long_result       enables long-result mode, displaying
                           counter-examples on failure rather than just false
       --start_size        specifies the initial value of the size parameter
@@ -71,9 +73,7 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
-Pending release:
-- fix bug with include paths of hrl files from parent apps
-
+- 0.7.0: fix bug with include paths of hrl files from parent apps, support counterexamples with --retry
 - 0.6.3: fix bug with cover-compiling in rebar 3.2.0 and above again
 - 0.6.2: fix bug with cover-compiling in rebar 3.2.0 and above
 - 0.6.1: fix bug on option parsing in config files

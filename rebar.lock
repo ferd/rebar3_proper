@@ -1,1 +1,6 @@
-[{<<"proper">>,{pkg,<<"proper">>,<<"1.1.1-beta">>},0}].
+{"1.1.0",
+[{<<"proper">>,{pkg,<<"proper">>,<<"1.1.1-beta">>},0}]}.
+[
+{pkg_hash,[
+ {<<"proper">>, <<"5EEF3FA0CAE017ECB4BF6FD6A144349A048E999223A4F1E98CE372FF1772EDD3">>}]}
+].
