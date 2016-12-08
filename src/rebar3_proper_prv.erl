@@ -41,7 +41,8 @@ do(State) ->
     %% code path but not pre-loaded in memory, though.
     TopAppsPaths = app_paths(State),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps)--TopAppsPaths, [soft_purge]),
-    code:add_patha(TopAppsPaths),
+    FlatPaths = TopAppsPaths ++ (code:get_path() -- TopAppsPaths),
+    true = code:set_path(FlatPaths),
     case run_type(Opts) of
         quickcheck -> do_quickcheck(State, Opts, ProperOpts);
         retry -> do_retry(State, Opts, ProperOpts)
