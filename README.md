@@ -76,6 +76,7 @@ that can be put in a consult file can be put in `{proper_opts, [Options]}.` in y
 Changelog
 ----
 
+- 0.7.2: rely on a non-beta PropEr version
 - 0.7.1: fix bug regarding lib and priv directories in code path
 - 0.7.0: fix bug with include paths of hrl files from parent apps, support counterexamples with --retry
 - 0.6.3: fix bug with cover-compiling in rebar 3.2.0 and above again
