@@ -10,7 +10,6 @@ directories of a rebar3 project, and running all properties (functions of arity
 Todo/Gotchas
 ----
 
-- The plugin relies on the `1.1.1-beta` hex package of proper.
 - No automated tests yet
 - would like to find a way to store failed tests to a counterexample file
   that can be re-run at will rather than just using `--retry` on the
