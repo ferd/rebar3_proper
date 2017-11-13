@@ -119,14 +119,17 @@ do_store(State, Opts, _ProperOpts) ->
         {ok, Data} ->
             Dir = proplists:get_value(dir, Opts, "test"),
             RegressionPath = filename:join([Dir, ?REGRESSION_FILE]),
-            {ok, Io} = file:open(RegressionPath, [append]),
+            {ok, Io} = file:open(RegressionPath, [append, {encoding, utf8}]),
             rebar_api:debug("Storing counterexamples to ~s", [RegressionPath]),
-            %% TODO: dedupe cases without messing comments or annotations?
-            [io:format(Io, "~n~p.~n", [{Mod,Fun,CounterEx}]) || {Mod,Fun,CounterEx} <- Data,
-                                                                CounterEx =/= undefined],
+            {ok, Prior} = file:consult(RegressionPath),
+            [io:format(Io, "~n~p.~n", [{Mod,Fun,CounterEx}])
+             || {Mod,Fun,CounterEx} <- Data,
+                CounterEx =/= undefined,
+                not lists:member({Mod,Fun,CounterEx}, Prior)], % dedupe
             file:close(Io),
             {ok, State};
-        {error, _} ->
+        {error, ConsultErr} ->
+            rebar_api:debug("counterexample file consult result: ~p", [ConsultErr]),
             rebar_api:info("no counterexamples to store.", []),
             {ok, State}
     end.
@@ -140,22 +143,22 @@ run_retries(State, Opts, ProperOpts, CounterExamples) ->
         Found ->
             ExpectedLen = length(CounterExamples),
             FoundLen = length(Found),
-            rebar_api:info("Running ~p found counterexamples out of ~p stored entries",
-                           [FoundLen, ExpectedLen]),
+            rebar_api:info("Running ~p counterexamples out of ~p properties",
+                           [ExpectedLen, FoundLen]),
             Failed = [{M, F, Result, Args}
                       || {M,F,Args} <- CounterExamples,
                          lists:member({M,F}, Found),
                          Result <- [catch retry(M, F, Args, ProperOpts)],
                          Result =/= true],
             FailedCount = length(Failed),
-            Passed = FoundLen - FailedCount,
+            Passed = ExpectedLen - FailedCount,
             case Failed of
                 [] ->
-                    rebar_api:info("~n~p/~p counterexamples passed", [Passed, FoundLen]),
+                    rebar_api:info("~n~p/~p counterexamples passed", [Passed, ExpectedLen]),
                     {ok, State};
                 [_|_] ->
                     rebar_api:error("~n~p/~p counterexamples passed, ~p failed",
-                                    [Passed, FoundLen, FailedCount]),
+                                    [Passed, ExpectedLen, FailedCount]),
                     ?PRV_ERROR({failed, Failed})
             end
     catch
@@ -210,7 +213,7 @@ retry(Mod, Fun, Args, Opts) ->
 store_counterexamples(State, Failed) ->
     Base = rebar_dir:base_dir(State),
     FilePath = filename:join([Base, ?COUNTEREXAMPLE_FILE]),
-    {ok, Io} = file:open(FilePath, [write]),
+    {ok, Io} = file:open(FilePath, [write, {encoding, utf8}]),
     rebar_api:debug("Writing counterexamples to ~s", [FilePath]),
     %% Then run as proper:check(Mod:Fun(), CounterEx)
     [io:format(Io, "~p.~n", [{Mod,Fun,CounterEx}]) || {Mod,Fun,_,CounterEx} <- Failed,
