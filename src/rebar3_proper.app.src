@@ -1,6 +1,6 @@
 {application, rebar3_proper,
  [{description, "Run PropEr test suites"},
-  {vsn, "0.7.2"},
+  {vsn, "0.8.0"},
   {registered, []},
   {applications,
    [kernel,

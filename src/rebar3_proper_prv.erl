@@ -6,6 +6,7 @@
 -define(DEPS, [compile]).
 -define(PRV_ERROR(Reason), {error, {?MODULE, Reason}}).
 -define(COUNTEREXAMPLE_FILE, "rebar3_proper-counterexamples.consult").
+-define(REGRESSION_FILE, "proper-regressions.consult").
 
 %% ===================================================================
 %% Public API
@@ -45,13 +46,19 @@ do(State) ->
     true = code:set_path(FlatPaths),
     case run_type(Opts) of
         quickcheck -> do_quickcheck(State, Opts, ProperOpts);
-        retry -> do_retry(State, Opts, ProperOpts)
+        retry -> do_retry(State, Opts, ProperOpts);
+        regressions -> do_regressions(State, Opts, ProperOpts);
+        store -> do_store(State, Opts, ProperOpts)
     end.
 
 run_type(Opts) ->
-    case proplists:get_value(retry, Opts, false) of
-        false -> quickcheck;
-        true -> retry
+    case {proplists:get_value(retry, Opts, false),
+          proplists:get_value(regressions, Opts, false),
+          proplists:get_value(store, Opts, false)} of
+        {true, _, _} -> retry;
+        {_, true, _} -> regressions;
+        {_, _, true} -> store;
+        _ -> quickcheck
     end.
 
 do_quickcheck(State, Opts, ProperOpts) ->
@@ -94,6 +101,40 @@ do_retry(State, Opts, ProperOpts) ->
             {ok, State}
     end.
 
+do_regressions(State, Opts, ProperOpts) ->
+    Dir = proplists:get_value(dir, Opts, "test"),
+    FilePath = filename:join([Dir, ?REGRESSION_FILE]),
+    case file:consult(FilePath) of
+        {ok, Data} ->
+            run_retries(State, Opts, ProperOpts, Data);
+        {error, _} ->
+            rebar_api:info("no regression tests to run.", []),
+            {ok, State}
+    end.
+
+do_store(State, Opts, _ProperOpts) ->
+    Base = rebar_dir:base_dir(State),
+    FilePath = filename:join([Base, ?COUNTEREXAMPLE_FILE]),
+    case file:consult(FilePath) of
+        {ok, Data} ->
+            Dir = proplists:get_value(dir, Opts, "test"),
+            RegressionPath = filename:join([Dir, ?REGRESSION_FILE]),
+            {ok, Io} = file:open(RegressionPath, [append, {encoding, utf8}]),
+            rebar_api:debug("Storing counterexamples to ~s", [RegressionPath]),
+            {ok, Prior} = file:consult(RegressionPath),
+            [io:format(Io, "~n~p.~n", [{Mod,Fun,CounterEx}])
+             || {Mod,Fun,CounterEx} <- Data,
+                CounterEx =/= undefined,
+                not lists:member({Mod,Fun,CounterEx}, Prior)], % dedupe
+            file:close(Io),
+            {ok, State};
+        {error, ConsultErr} ->
+            rebar_api:debug("counterexample file consult result: ~p", [ConsultErr]),
+            rebar_api:info("no counterexamples to store.", []),
+            {ok, State}
+    end.
+
+
 run_retries(State, Opts, ProperOpts, CounterExamples) ->
     Dir = proplists:get_value(dir, Opts, "test"),
     {Mods, Props} = lists:unzip([{atom_to_list(M), atom_to_list(F)}
@@ -102,22 +143,22 @@ run_retries(State, Opts, ProperOpts, CounterExamples) ->
         Found ->
             ExpectedLen = length(CounterExamples),
             FoundLen = length(Found),
-            rebar_api:info("Running ~p found counterexamples out of ~p stored entries",
-                           [FoundLen, ExpectedLen]),
+            rebar_api:info("Running ~p counterexamples out of ~p properties",
+                           [ExpectedLen, FoundLen]),
             Failed = [{M, F, Result, Args}
                       || {M,F,Args} <- CounterExamples,
                          lists:member({M,F}, Found),
                          Result <- [catch retry(M, F, Args, ProperOpts)],
                          Result =/= true],
             FailedCount = length(Failed),
-            Passed = FoundLen - FailedCount,
+            Passed = ExpectedLen - FailedCount,
             case Failed of
                 [] ->
-                    rebar_api:info("~n~p/~p counterexamples passed", [Passed, FoundLen]),
+                    rebar_api:info("~n~p/~p counterexamples passed", [Passed, ExpectedLen]),
                     {ok, State};
                 [_|_] ->
                     rebar_api:error("~n~p/~p counterexamples passed, ~p failed",
-                                    [Passed, FoundLen, FailedCount]),
+                                    [Passed, ExpectedLen, FailedCount]),
                     ?PRV_ERROR({failed, Failed})
             end
     catch
@@ -172,10 +213,11 @@ retry(Mod, Fun, Args, Opts) ->
 store_counterexamples(State, Failed) ->
     Base = rebar_dir:base_dir(State),
     FilePath = filename:join([Base, ?COUNTEREXAMPLE_FILE]),
-    {ok, Io} = file:open(FilePath, [write]),
+    {ok, Io} = file:open(FilePath, [write, {encoding, utf8}]),
     rebar_api:debug("Writing counterexamples to ~s", [FilePath]),
     %% Then run as proper:check(Mod:Fun(), CounterEx)
-    [io:format(Io, "~p.~n", [{Mod,Fun,CounterEx}]) || {Mod,Fun,_,CounterEx} <- Failed],
+    [io:format(Io, "~p.~n", [{Mod,Fun,CounterEx}]) || {Mod,Fun,_,CounterEx} <- Failed,
+                                                      CounterEx =/= undefined],
     file:close(Io),
     ok.
 
@@ -286,6 +328,10 @@ proper_opts() ->
      {retry, undefined, "retry", {boolean, false},
       "If failing test case counterexamples have been stored, "
       "they are retried"},
+     {regressions, undefined, "regressions", {boolean, false},
+      "replays the test cases stored in the regression file."},
+     {store, undefined, "store", {boolean, false},
+      "stores the last counterexample into the regression file."},
      {long_result, undefined, "long_result", boolean,
       "enables long-result mode, displaying counter-examples on failure "
       "rather than just false"},
@@ -329,6 +375,10 @@ rebar3_opts([{properties, Props} | T]) ->
     [{properties, maybe_parse_csv(Props)} | rebar3_opts(T)];
 rebar3_opts([{retry, Retry} | T]) ->
     [{retry, Retry} | rebar3_opts(T)];
+rebar3_opts([{regressions, Retry} | T]) ->
+    [{regressions, Retry} | rebar3_opts(T)];
+rebar3_opts([{store, Retry} | T]) ->
+    [{store, Retry} | rebar3_opts(T)];
 rebar3_opts([_ | T]) ->
     rebar3_opts(T).
 
@@ -354,6 +404,8 @@ proper_opts([{module,_} | T]) -> proper_opts(T);
 proper_opts([{properties,_} | T]) -> proper_opts(T);
 proper_opts([{cover,_} | T]) -> proper_opts(T);
 proper_opts([{retry,_} | T]) -> proper_opts(T);
+proper_opts([{regressions,_} | T]) -> proper_opts(T);
+proper_opts([{store,_} | T]) -> proper_opts(T);
 %% fall-through
 proper_opts([H|T]) -> [H | proper_opts(T)].
 
