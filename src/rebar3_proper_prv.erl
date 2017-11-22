@@ -20,7 +20,7 @@ init(State) ->
             {bare, true},                 % The task can be run by the user, always true
             {deps, ?DEPS},                % The list of dependencies
             {example, "rebar3 proper"},   % How to use the plugin
-            {opts, proper_opts()},                   % list of options understood by the plugin
+            {opts, proper_opts()},        % list of options understood by the plugin
             {short_desc, "Run PropEr test suites"},
             {desc, "Run PropEr test suites"}
     ]),
@@ -44,6 +44,15 @@ do(State) ->
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps)--TopAppsPaths, [soft_purge]),
     FlatPaths = TopAppsPaths ++ (code:get_path() -- TopAppsPaths),
     true = code:set_path(FlatPaths),
+
+    SysConfigs = sys_config_list(ProperOpts, Opts),
+    Configs = lists:flatmap(fun(Filename) ->
+                               rebar_file_utils:consult_config(State, Filename)
+                            end, SysConfigs),
+    [application:load(Application) || Config <- SysConfigs, {Application, _} <- Config],
+    rebar_utils:reread_config(Configs),
+
+
     case run_type(Opts) of
         quickcheck -> do_quickcheck(State, Opts, ProperOpts);
         retry -> do_retry(State, Opts, ProperOpts);
@@ -356,7 +365,9 @@ proper_opts() ->
       "up execution"},
      {on_output, undefined, "on_output", string,
       "specifies a binary function '{Mod,Fun}', similar to io:format/2, "
-      "to be used for all output printing"}
+      "to be used for all output printing"},
+     {sys_config, undefined, "sys_config", string,
+      "config file to load before starting tests"}
     ].
 
 handle_opts(State) ->
@@ -377,6 +388,8 @@ rebar3_opts([{retry, Retry} | T]) ->
     [{retry, Retry} | rebar3_opts(T)];
 rebar3_opts([{regressions, Retry} | T]) ->
     [{regressions, Retry} | rebar3_opts(T)];
+rebar3_opts([{sys_config, Config} | T]) ->
+    [{sys_config, Config} | rebar3_opts(T)];
 rebar3_opts([{store, Retry} | T]) ->
     [{store, Retry} | rebar3_opts(T)];
 rebar3_opts([_ | T]) ->
@@ -405,6 +418,7 @@ proper_opts([{properties,_} | T]) -> proper_opts(T);
 proper_opts([{cover,_} | T]) -> proper_opts(T);
 proper_opts([{retry,_} | T]) -> proper_opts(T);
 proper_opts([{regressions,_} | T]) -> proper_opts(T);
+proper_opts([{sys_config,_} | T]) -> proper_opts(T);
 proper_opts([{store,_} | T]) -> proper_opts(T);
 %% fall-through
 proper_opts([H|T]) -> [H | proper_opts(T)].
@@ -441,3 +455,17 @@ app_paths(State) ->
     Apps = rebar_state:project_apps(State),
     [rebar_app_info:ebin_dir(App) || App <- Apps,
                                      not rebar_app_info:is_checkout(App)].
+
+sys_config_list(CmdOpts, CfgOpts) ->
+    CmdSysConfigs = split_string(proplists:get_value(sys_config, CmdOpts, "")),
+    case proplists:get_value(sys_config, CfgOpts, []) of
+        [H | _]=Configs when is_list(H) ->
+            Configs ++ CmdSysConfigs;
+        [] ->
+            CmdSysConfigs;
+        Configs ->
+            [Configs | CmdSysConfigs]
+    end.
+
+split_string(String) ->
+    string:tokens(String, [$,]).
