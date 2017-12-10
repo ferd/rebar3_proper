@@ -22,7 +22,7 @@ Add the plugin to your rebar config:
     %% The PropEr dependency is still required to compile the test cases
     {profiles,
         [{test, [
-            {deps, [{proper, "1.1.1-beta"}]}
+            {deps, [{proper, "1.2.0"}]}
         ]}
     ]}.
 
