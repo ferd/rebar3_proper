@@ -251,11 +251,23 @@ find_properties(State, Dir, Mods, Props) ->
     rebar_api:debug("Dir: ~p", [Dir]),
     rebar_api:debug("Mods: ~p", [Mods]),
     rebar_api:debug("Props: ~p", [Props]),
-    %% Need to compile somewhere in there
+    %% Fetch directories and app configs
+    RawDirs = [{{rebar_app_info:name(App),
+                 filename:join([rebar_app_info:out_dir(App), Dir])},
+                filename:join(rebar_app_info:dir(App), Dir)}
+               || App <- rebar_state:project_apps(State),
+                  not rebar_app_info:is_checkout(App)],
+    %% Pick a root test directory for umbrella apps
+    UmbrellaDir =
+        [{{<<"root">>,
+           filename:join(rebar_dir:base_dir(State), "prop_"++Dir)},
+         P} || P <- [make_absolute_path(filename:join([".", Dir]))],
+               not lists:member(P, [D || {_,D} <- RawDirs])],
+    TestDirs = RawDirs ++ UmbrellaDir,
+    rebar_api:debug("SearchDirs: ~p", [TestDirs]),
+    %% Keep directories with properties in them
     Dirs = [{App, TestDir}
-            || App <- rebar_state:project_apps(State),
-               not rebar_app_info:is_checkout(App),
-               TestDir <- [filename:join(rebar_app_info:dir(App), Dir)],
+            || {App, TestDir} <- TestDirs,
                {ok, Files} <- [file:list_dir(TestDir)],
                lists:any(fun(File) -> prop_suite(Mods, File) end, Files)],
     compile_dirs(State, Dir, Dirs),
@@ -285,16 +297,15 @@ properties(Props, Mod) ->
 prop_prefix(Atom) ->
     lists:prefix("prop_", atom_to_list(Atom)).
 
-compile_dirs(State, TestDir, Dirs) -> % [{App, Dir}]
+compile_dirs(State, _TestDir, Dirs) -> % [{App, Dir}]
     %% Set up directory -- may need to unlink then re-link
     %% copy contents into directory
     %% call the compiler
     [begin
-       rebar_api:debug("Compiling ~s for PropEr", [rebar_app_info:name(App)]),
-       OutDir = filename:join([rebar_app_info:out_dir(App), TestDir]),
+       rebar_api:debug("Compiling ~s for PropEr", [AppName]),
        setup(State, OutDir),
        compile(State, Dir, OutDir)
-     end || {App, Dir} <- Dirs],
+     end || {{AppName, OutDir}, Dir} <- Dirs],
     rebar_api:debug("App compiled", []).
 
 setup(_State, OutDir) ->
@@ -469,3 +480,17 @@ sys_config_list(CmdOpts, CfgOpts) ->
 
 split_string(String) ->
     string:tokens(String, [$,]).
+
+make_absolute_path(Path) ->
+    case filename:pathtype(Path) of
+        absolute ->
+            Path;
+        relative ->
+            {ok, Dir} = file:get_cwd(),
+            filename:join([Dir, Path]);
+        volumerelative ->
+            Volume = hd(filename:split(Path)),
+            {ok, Dir} = file:get_cwd(Volume),
+            filename:join([Dir, Path])
+    end.
+

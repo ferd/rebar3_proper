@@ -86,6 +86,7 @@ A workflow to handle errors and do development is being experimented with:
 Changelog
 ----
 
+- 0.9.0  support for umbrella projects
 - 0.8.0: storage and replay of counterexamples
 - 0.7.2: rely on a non-beta PropEr version
 - 0.7.1: fix bug regarding lib and priv directories in code path
