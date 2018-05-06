@@ -183,7 +183,8 @@ run_retries(State, Opts, ProperOpts, CounterExamples) ->
 -spec format_error(any()) ->  iolist().
 format_error({failed, Failed}) ->
     ["Failed test cases:",
-     [io_lib:format("~n  ~p:~p() -> ~p", [M,F,Res]) || {M,F,Res,_} <- Failed]];
+     [io_lib:format("~n~p:~p() -> ~p~s",
+                    [M,F,Res,format_doc(M,F)]) || {M,F,Res,_} <- Failed]];
 format_error({module_not_found, Mod, any}) ->
     io_lib:format("Module ~p does not exist or exports no properties", [Mod]);
 format_error({module_not_found, Mod, _}) ->
@@ -216,11 +217,26 @@ maybe_write_coverdata(State) ->
 
 check(Mod, Fun, Opts) ->
     rebar_api:info("Testing ~p:~p()", [Mod, Fun]),
-    proper:quickcheck(Mod:Fun(), Opts).
+    NewOpts = fetch_opts(Mod, Fun, Opts),
+    proper:quickcheck(Mod:Fun(), NewOpts).
 
 retry(Mod, Fun, Args, Opts) ->
     rebar_api:info("Retrying ~p:~p()", [Mod, Fun]),
-    proper:check(Mod:Fun(), Args, Opts).
+    NewOpts = fetch_opts(Mod, Fun, Opts),
+    proper:check(Mod:Fun(), Args, NewOpts).
+
+fetch_opts(Mod, Fun, Opts) ->
+    try Mod:Fun(opts) of
+        TestOpts ->
+            rebar_api:debug("Custom test options found for ~p:~p():~n\t~p",
+                            [Mod, Fun, TestOpts]),
+            TestOpts ++ Opts
+    catch
+        error:E when E == undef; E == function_clause ->
+            rebar_api:debug("~p:~p(opts) not found; using predefined options",
+                            [Mod, Fun]),
+            Opts
+    end.
 
 store_counterexamples(State, Failed) ->
     Base = rebar_dir:base_dir(State),
@@ -514,3 +530,14 @@ run_post_hooks_(State) ->
     PluginDepsPaths = lists:usort(rebar_state:code_paths(State, all_plugin_deps)),
     code:add_pathsa(PluginDepsPaths),
     ok.
+
+format_doc(Mod, Fun) ->
+    try Mod:Fun(doc) of
+        IoData -> [" (", IoData, $)]
+    catch
+        error:E when E == undef; E == function_clause ->
+            rebar_api:debug("~p:~p(doc) not found; omitting docstring",
+                            [Mod,Fun]),
+            []
+    end.
+

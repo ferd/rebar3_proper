@@ -83,10 +83,50 @@ A workflow to handle errors and do development is being experimented with:
 3. Call `rebar3 proper --store` if the cases are interesting and you want to keep them for the future. The entries will be appended in a `proper-regressions.consult` file in your configured test directory. Check in that file or edit it as you wish.
 4. Use `rebar3 proper --regressions` to prevent regressions from happening by testing your code against all stored counterexamples
 
+Per-Properties Meta functions
+---
+
+This plugin allows you to export additional meta functions to add per-property options and documentation. For example, in the following code:
+
+```erlang
+-module(prop_demo).
+-include_lib("proper/include/proper.hrl").
+-export([prop_demo/1]). % NOT auto-exported by PropEr, we must do it ourselves
+
+prop_demo(doc) ->
+    %% Docs are shown when the test property fails
+    "only properties that return `true' are seen as passing";
+prop_demo(opts) ->
+    %% Override CLI and rebar.config option for `numtests' only
+    [{numtests, 500}].
+
+prop_demo() -> % auto-exported by Proper
+    ?FORALL(_N, integer(), false). % always fail
+
+prop_works() ->
+    ?FORALL(_N, integer(), true).
+
+prop_fails() ->
+    ?FORALL(_N, integer(), false). % fails also
+```
+
+When run, the `prop_demo/0` property will _always_ run 500 times (if it does not fail), and on failure, properties with a doc value have it displayed:
+
+```
+...
+1/3 properties passed, 2 failed
+===> Failed test cases:
+prop_demo:prop_demo() -> false (only properties that return `true' are seen as passing)
+prop_demo:prop_fails() -> false
+```
+
+The meta function may be omitted entirely.
+
+
 Changelog
 ----
 
-- 0.10.0: support hooks for app and umbrella level
+- 0.10.0: support hooks for app and umbrella level; add per-property opts and docs via meta-functions
 - 0.9.0: support for umbrella projects
 - 0.8.0: storage and replay of counterexamples
 - 0.7.2: rely on a non-beta PropEr version
