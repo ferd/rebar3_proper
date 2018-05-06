@@ -29,6 +29,7 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
+    run_pre_hooks(State),
     {Opts, ProperOpts} = handle_opts(State),
     rebar_api:debug("rebar3 proper options: ~p", [Opts]),
     rebar_api:debug("proper-specific options: ~p", [ProperOpts]),
@@ -53,12 +54,14 @@ do(State) ->
     rebar_utils:reread_config(Configs),
 
 
-    case run_type(Opts) of
+    Res = case run_type(Opts) of
         quickcheck -> do_quickcheck(State, Opts, ProperOpts);
         retry -> do_retry(State, Opts, ProperOpts);
         regressions -> do_regressions(State, Opts, ProperOpts);
         store -> do_store(State, Opts, ProperOpts)
-    end.
+    end,
+    run_post_hooks(State, Res),
+    Res.
 
 run_type(Opts) ->
     case {proplists:get_value(retry, Opts, false),
@@ -494,3 +497,20 @@ make_absolute_path(Path) ->
             filename:join([Dir, Path])
     end.
 
+run_pre_hooks(State) ->
+    Providers = rebar_state:providers(State),
+    Cwd = rebar_dir:get_cwd(),
+    rebar_hooks:run_project_and_app_hooks(Cwd, pre, ?PROVIDER, Providers, State).
+
+run_post_hooks(_, {ok, State}) -> run_post_hooks_(State);
+run_post_hooks(State, _) -> run_post_hooks_(State).
+
+run_post_hooks_(State) ->
+    Providers = rebar_state:providers(State),
+    Cwd = rebar_dir:get_cwd(),
+    rebar_hooks:run_project_and_app_hooks(Cwd, post, ?PROVIDER, Providers, State),
+    %% reset code paths for the plugin if we want to handle our own errors
+    %% since the rebar3 hooks drop them by default
+    PluginDepsPaths = lists:usort(rebar_state:code_paths(State, all_plugin_deps)),
+    code:add_pathsa(PluginDepsPaths),
+    ok.
