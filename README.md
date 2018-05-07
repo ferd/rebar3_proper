@@ -127,6 +127,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
+- 0.10.1: support per-app `erl_opts` values rather than only root config
 - 0.10.0: support hooks for app and umbrella level; add per-property opts and docs via meta-functions; remove runtime dependency on PropEr and use the one specified by the app instead
 - 0.9.0: support for umbrella projects
 - 0.8.0: storage and replay of counterexamples
