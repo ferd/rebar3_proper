@@ -132,6 +132,7 @@ do_store(State, Opts, _ProperOpts) ->
         {ok, Data} ->
             Dir = proplists:get_value(dir, Opts, "test"),
             RegressionPath = filename:join([Dir, ?REGRESSION_FILE]),
+            filelib:ensure_dir(RegressionPath),
             {ok, Io} = file:open(RegressionPath, [append, {encoding, utf8}]),
             rebar_api:debug("Storing counterexamples to ~s", [RegressionPath]),
             {ok, Prior} = file:consult(RegressionPath),
