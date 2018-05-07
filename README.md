@@ -19,7 +19,8 @@ Add the plugin to your rebar config:
 
     %% the plugin itself
     {plugins, [rebar3_proper]}.
-    %% The PropEr dependency is still required to compile the test cases
+    %% The PropEr dependency is required to compile the test cases
+    %% and will be used to run the tests as well.
     {profiles,
         [{test, [
             {deps, [{proper, "1.2.0"}]}
@@ -126,7 +127,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
-- 0.10.0: support hooks for app and umbrella level; add per-property opts and docs via meta-functions
+- 0.10.0: support hooks for app and umbrella level; add per-property opts and docs via meta-functions; remove runtime dependency on PropEr and use the one specified by the app instead
 - 0.9.0: support for umbrella projects
 - 0.8.0: storage and replay of counterexamples
 - 0.7.2: rely on a non-beta PropEr version

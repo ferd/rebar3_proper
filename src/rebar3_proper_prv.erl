@@ -46,6 +46,7 @@ do(State) ->
     FlatPaths = TopAppsPaths ++ (code:get_path() -- TopAppsPaths),
     true = code:set_path(FlatPaths),
 
+    ensure_proper(),
     SysConfigs = sys_config_list(ProperOpts, Opts),
     Configs = lists:flatmap(fun(Filename) ->
                                rebar_file_utils:consult_config(State, Filename)
@@ -214,6 +215,15 @@ maybe_write_coverdata(State) ->
                  false -> State
              end,
     rebar_prv_cover:maybe_write_coverdata(State1, ?PROVIDER).
+
+ensure_proper() ->
+    try proper:module_info() of
+        _ -> ok
+    catch
+        error:undef ->
+            rebar_api:abort("PropEr not found. Add it as a dependency of "
+                            "the application you are testing.", [])
+    end.
 
 check(Mod, Fun, Opts) ->
     rebar_api:info("Testing ~p:~p()", [Mod, Fun]),
