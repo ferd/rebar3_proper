@@ -333,20 +333,29 @@ compile_dirs(State, _TestDir, Dirs) -> % [{App, Dir}]
     [begin
        rebar_api:debug("Compiling ~s for PropEr", [AppName]),
        setup(State, OutDir),
-       compile(State, Dir, OutDir)
+       compile(State, AppName, Dir, OutDir)
      end || {{AppName, OutDir}, Dir} <- Dirs],
     rebar_api:debug("App compiled", []).
 
 setup(_State, OutDir) ->
     filelib:ensure_dir(filename:join([OutDir, "dummy.beam"])).
 
-compile(State, Src, Out) ->
+compile(State, AppName, Src, Out) ->
+    Opts = case AppName of
+        <<"root">> -> rebar_state:opts(State);
+        _ -> rebar_app_info:opts(find_app(AppName, State))
+    end,
     rebar_api:debug("Compiling files in ~s to ~s", [Src, Out]),
     NewOpts = lists:foldl(fun({K, V}, Dict) -> rebar_opts:set(Dict, K, V) end,
-                          rebar_state:opts(State),
+                          Opts,
                           [{src_dirs, ["."]}]),
     IncludeOpts = add_includes(NewOpts, State),
     rebar_erlc_compiler:compile(IncludeOpts, Src, ec_cnv:to_list(Out)).
+
+find_app(AppName, State) ->
+    [App] = [App || App <- rebar_state:project_apps(State),
+                    rebar_app_info:name(App) =:= AppName],
+    App.
 
 add_includes(NewOpts, State) ->
     Includes = lists:flatmap(fun app_includes/1, rebar_state:project_apps(State)),
