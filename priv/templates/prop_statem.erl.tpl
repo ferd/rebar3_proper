@@ -9,10 +9,10 @@
 %%% PROPERTIES %%%
 %%%%%%%%%%%%%%%%%%
 prop_test() ->
-    ?FORALL(Cmds, commands(?MODEL),
+    ?FORALL(Cmds, commands(?MODULE),
             begin
                 actual_system:start_link(),
-                {History, State, Result} = run_commands(?MODEL, Cmds),
+                {History, State, Result} = run_commands(?MODULE, Cmds),
                 actual_system:stop(),
                 ?WHENFAIL(io:format("History: ~p\nState: ~p\nResult: ~p\n",
                                     [History,State,Result]),
