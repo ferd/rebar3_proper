@@ -127,6 +127,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
+- 0.10.4: add PropEr FSM template
 - 0.10.3: fix the template change, which was apparently rushed.
 - 0.10.2: create the regression file path if it doesn't exist; simplify prop_statem template
 - 0.10.1: support per-app `erl_opts` values rather than only root config

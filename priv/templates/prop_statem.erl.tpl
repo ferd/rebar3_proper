@@ -22,15 +22,15 @@ prop_test() ->
 %%%%%%%%%%%%%
 %%% MODEL %%%
 %%%%%%%%%%%%%
+%% @doc Initial model value at system start. Should be deterministic.
+initial_state() ->
+    #{}.
+
 %% @doc List of possible commands to run against the system
 command(_State) ->
     oneof([
         {call, actual_system, some_call, [term(), term()]}
     ]).
-
-%% @doc Initial model value at system start. Should be deterministic.
-initial_state() ->
-    #{}.
 
 %% @doc Determines whether a command should be valid under the
 %% current state.
