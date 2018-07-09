@@ -31,7 +31,7 @@ on(_Data) -> [{off, {call, actual_system, some_call, [term(), term()]}}].
 off(_Data) ->
     [{off, {call, actual_system, some_call, [term(), term()]}},
      {history, {call, actual_system, some_call, [term(), term()]}},
-     {{service,sub,state}, {call, actual_system, some_call, [term()]}}].
+     { {service,sub,state}, {call, actual_system, some_call, [term()]}}].
 
 service(_Sub, _State, _Data) ->
     [{on, {call, actual_system, some_call, [term(), term()]}}].
