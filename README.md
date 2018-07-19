@@ -23,7 +23,13 @@ Add the plugin to your rebar config:
     %% and will be used to run the tests as well.
     {profiles,
         [{test, [
-            {deps, [{proper, "1.2.0"}]}
+            {deps, [
+                %% hex
+                {proper, "1.2.0"}
+                %% newest from master
+                {proper, {git, "https://github.com/proper-testing/proper.git",
+                          {branch, "master"}}}
+            ]}
         ]}
     ]}.
 
@@ -46,6 +52,8 @@ Then just call your plugin directly in an existing application:
       -p, --prop          name of properties to test within a specified module
                           (comma-separated)
       -n, --numtests      number of tests to run when testing a given property
+      -s, --search_steps  number of searches to run when testing a given
+                          targeted property
       -v, --verbose       each propertie tested shows its output or not
                           (defaults to true)
       -c, --cover         generate cover data [default: false]
@@ -127,6 +135,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
+- 0.11.0: add option to set search steps for targeted properties
 - 0.10.4: add PropEr FSM template
 - 0.10.3: fix the template change, which was apparently rushed.
 - 0.10.2: create the regression file path if it doesn't exist; simplify prop_statem template

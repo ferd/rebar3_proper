@@ -379,6 +379,8 @@ proper_opts() ->
       "name of properties to test within a specified module (comma-separated)"},
      {numtests, $n, "numtests", integer,
       "number of tests to run when testing a given property"},
+     {search_steps, $s, "search_steps", integer,
+      "number of searches to run when testing a given targeted property"},
      {verbose, $v, "verbose", boolean,
       "each property tested shows its output or not (defaults to true)"},
      {cover, $c, "cover", {boolean, false},
