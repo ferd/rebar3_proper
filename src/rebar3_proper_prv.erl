@@ -185,7 +185,7 @@ run_retries(State, Opts, ProperOpts, CounterExamples) ->
 -spec format_error(any()) ->  iolist().
 format_error({failed, Failed}) ->
     ["Failed test cases:",
-     [io_lib:format("~n~p:~p() -> ~p~s",
+     [io_lib:format("~n~p:~p() -> ~p~ts",
                     [M,F,Res,format_doc(M,F)]) || {M,F,Res,_} <- Failed]];
 format_error({module_not_found, Mod, any}) ->
     io_lib:format("Module ~p does not exist or exports no properties", [Mod]);
