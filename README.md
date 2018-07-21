@@ -135,6 +135,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
+- 0.11.1: fix unicode support in meta-functions output
 - 0.11.0: add option to set search steps for targeted properties
 - 0.10.4: add PropEr FSM template
 - 0.10.3: fix the template change, which was apparently rushed.
