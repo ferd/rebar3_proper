@@ -25,7 +25,7 @@ Add the plugin to your rebar config:
         [{test, [
             {deps, [
                 %% hex
-                {proper, "1.2.0"}
+                {proper, "1.3.0"}
                 %% newest from master
                 {proper, {git, "https://github.com/proper-testing/proper.git",
                           {branch, "master"}}}
