@@ -18,7 +18,7 @@ Use
 Add the plugin to your rebar config:
 
     %% the plugin itself
-    {plugins, [rebar3_proper]}.
+    {project_plugins, [rebar3_proper]}.
     %% The PropEr dependency is required to compile the test cases
     %% and will be used to run the tests as well.
     {profiles,
