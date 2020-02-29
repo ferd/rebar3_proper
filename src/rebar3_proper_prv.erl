@@ -356,6 +356,8 @@ proper_opts() ->
       "each property tested shows its output or not (defaults to true)"},
      {cover, $c, "cover", {boolean, false},
       "generate cover data"},
+     {numworkers, $w, "workers", integer,
+      "number of workers to use when parallelizing property tests"},
      %% no short format for these buddies
      {retry, undefined, "retry", {boolean, false},
       "If failing test case counterexamples have been stored, "
