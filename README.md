@@ -135,6 +135,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
+- 0.12.0: drop compile phase since newer rebar3 versions handle all of that for us out of the box. Eliminates old deprecation warning.
 - 0.11.1: fix unicode support in meta-functions output
 - 0.11.0: add option to set search steps for targeted properties
 - 0.10.4: add PropEr FSM template
