@@ -31,8 +31,9 @@ init(State) ->
 do(State) ->
     run_pre_hooks(State),
     {Opts, ProperOpts} = handle_opts(State),
-    rebar_api:debug("rebar3 proper options: ~p", [Opts]),
-    rebar_api:debug("proper-specific options: ~p", [ProperOpts]),
+    rebar_api:debug("{proper_opts,\n\t% general options:~n\t~p~n\t++~n"
+                                "\t% proper-specific options:~n\t~p}",
+                     [Opts, ProperOpts]),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps), [soft_purge]),
     maybe_cover_compile(State),
     %% needed in 3.2.0 and after -- this reloads the code paths required to
@@ -77,7 +78,7 @@ run_type(Opts) ->
 do_quickcheck(State, Opts, ProperOpts) ->
     try find_properties(State, Opts) of
         Props ->
-            rebar_api:debug("Props: ~p", [Props]),
+            rebar_api:debug("properties: ~p", [Props]),
             Failed = [{Mod, Fun, Res, proper:counterexample()}
                       || {Mod, Fun} <- Props,
                          Res <- [catch check(Mod, Fun, ProperOpts)],
@@ -278,9 +279,6 @@ find_properties(State, Opts) ->
     Found.
 
 find_properties(State, Dir, Mods, Props) ->
-    rebar_api:debug("Dir: ~p", [Dir]),
-    rebar_api:debug("Mods: ~p", [Mods]),
-    rebar_api:debug("Props: ~p", [Props]),
     %% Fetch directories and app configs
     RawDirs = [{{rebar_app_info:name(App),
                  filename:join([rebar_app_info:out_dir(App), Dir])},
@@ -304,6 +302,7 @@ find_properties(State, Dir, Mods, Props) ->
              {ok, Files} <- [file:list_dir(TestDir)],
              File <- Files,
              prop_suite(Mods, File),
+             mod_compiled(module(File), TestDir),
              Prop <- properties(Props, module(File))].
 
 prop_suite(Mods, File) ->
@@ -317,8 +316,23 @@ prop_suite(Mods, File) ->
 module(File) ->
     list_to_atom(filename:basename(File, ".erl")).
 
+mod_compiled(Mod, TestDir) ->
+    try Mod:module_info() of
+        _ -> true
+    catch
+        error:undef when TestDir =:= "test" ->
+            rebar_api:debug("Skipping module ~p since it was not compiled.",
+                            [Mod]),
+            false;
+        error:undef ->
+            rebar_api:debug("Skipping module ~p since it was not compiled. "
+                            "Verify presence in extra_src_dirs", [Mod]),
+            false
+    end.
+
 properties(any, Mod) ->
-    [{Mod, Prop} || {Prop,0} <- Mod:module_info(exports), prop_prefix(Prop)];
+    [{Mod, Prop} || {Prop,0} <- Mod:module_info(exports),
+                    prop_prefix(Prop)];
 properties(Props, Mod) ->
     [{Mod, Prop} || {Prop,0} <- Mod:module_info(exports),
                     lists:member(atom_to_list(Prop), Props)].
@@ -328,7 +342,8 @@ prop_prefix(Atom) ->
 
 proper_opts() ->
     [{dir, $d, "dir", string,
-      "directory where the property tests are located (defaults to \"test\")"},
+      "directory where the property tests are located (defaults to \"test\"). "
+      "The directory also needs to be declared in extra_src_dirs."},
      {module, $m, "module", string,
       "name of one or more modules to test (comma-separated)"},
      {properties, $p, "prop", string,
@@ -381,8 +396,14 @@ proper_opts() ->
 handle_opts(State) ->
     {CliOpts, _} = rebar_state:command_parsed_args(State),
     ConfigOpts = rebar_state:get(State, proper_opts, []),
-    {rebar3_opts(merge_opts(ConfigOpts, CliOpts)),
+    {fill_defaults(rebar3_opts(merge_opts(ConfigOpts, CliOpts))),
      proper_opts(merge_opts(ConfigOpts, proper_opts(CliOpts)))}.
+
+fill_defaults(Opts) ->
+    [{dir, "test"} || proplists:get_value(dir, Opts) =:= undefined] ++
+    [{mods, any} || proplists:get_value(mods, Opts) =:= undefined] ++
+    [{properties, any} || proplists:get_value(properties, Opts) =:= undefined]
+    ++ Opts.
 
 rebar3_opts([]) ->
     [];

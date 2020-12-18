@@ -47,7 +47,8 @@ Then just call your plugin directly in an existing application:
                          [--any_to_integer <any_to_integer>]
     
       -d, --dir           directory where the property tests are located
-                          (defaults to "test")
+                          (defaults to "test"). The directory also needs to be
+                          declared in extra_src_dirs.
       -m, --module        name of one or more modules to test (comma-separated)
       -p, --prop          name of properties to test within a specified module
                           (comma-separated)
@@ -135,6 +136,7 @@ The meta function may be omitted entirely.
 Changelog
 ----
 
+- 0.12.1: fix debug message to match newer rebar3 standards, fixes unintuitive handling of non-compiled directories.
 - 0.12.0: drop compile phase since newer rebar3 versions handle all of that for us out of the box. Eliminates old deprecation warning.
 - 0.11.1: fix unicode support in meta-functions output
 - 0.11.0: add option to set search steps for targeted properties
