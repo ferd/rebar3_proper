@@ -37,6 +37,7 @@ Then just call your plugin directly in an existing application:
 
     Usage: rebar3 proper [-d <dir>] [-m <module>] [-p <properties>]
                          [-n <numtests>] [-v <verbose>] [-c [<cover>]]
+                         [-w <workers>] [-t <property_type>]
                          [--retry [<retry>]] [--regressions [<regressions>]]
                          [--store [<store>]] [--long_result <long_result>]
                          [--start_size <start_size>] [--max_size <max_size>]
@@ -45,6 +46,7 @@ Then just call your plugin directly in an existing application:
                          [--constraint_tries <constraint_tries>]
                          [--spec_timeout <spec_timeout>]
                          [--any_to_integer <any_to_integer>]
+                         [--stop_nodes <boolean>]
     
       -d, --dir           directory where the property tests are located
                           (defaults to "test"). The directory also needs to be
@@ -58,6 +60,12 @@ Then just call your plugin directly in an existing application:
       -v, --verbose       each propertie tested shows its output or not
                           (defaults to true)
       -c, --cover         generate cover data [default: false]
+      -w, --workers       number of workers to use when parallelizing property 
+                          tests
+      -t, --type          this is only used when running parallel PropEr: 
+                          indicates the type of the property to test, it can 
+                          either be "pure" when it is side-effect and has no 
+                          state, or "impure" when it does
       --retry             If failing test case counterexamples have been
                           stored, they are retried [default: false]
       --regressions       replays the test cases stored in the regression
@@ -79,6 +87,10 @@ Then just call your plugin directly in an existing application:
                           considers an input to be failing
       --any_to_integer    converts instances of the any() type to integers in
                           order to speed up execution
+      --stop_nodes        this is only used when running parallel PropEr: 
+                          indicates whether PropEr should restart the nodes 
+                          for each impure property, when testing them in 
+                          parallel, or not
 
 All of [PropEr's standard configurations](http://proper.softlab.ntua.gr/doc/proper.html#Options)
 that can be put in a consult file can be put in `{proper_opts, [Options]}.` in your rebar.config file.
