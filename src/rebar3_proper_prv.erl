@@ -396,7 +396,11 @@ proper_opts() ->
       "specifies a binary function '{Mod,Fun}', similar to io:format/2, "
       "to be used for all output printing"},
      {sys_config, undefined, "sys_config", string,
-      "config file to load before starting tests"}
+      "config file to load before starting tests"},
+     {stop_nodes, undefined, "stop_nodes", boolean,
+      "this is only used when running parallel PropEr: indicates whether "
+      "PropEr should restart the nodes for each impure property, "
+      "when testing them in parallel, or not"}
     ].
 
 handle_opts(State) ->
