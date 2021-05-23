@@ -358,6 +358,10 @@ proper_opts() ->
       "generate cover data"},
      {numworkers, $w, "workers", integer,
       "number of workers to use when parallelizing property tests"},
+     {type, $t, "type", atom,
+      "this is only used when running parallel PropEr: indicates the "
+      "type of the property to test, it can either be \"pure\" when it is side-effect "
+      "and has no state, or \"impure\" when it does"},
      %% no short format for these buddies
      {retry, undefined, "retry", {boolean, false},
       "If failing test case counterexamples have been stored, "
@@ -442,6 +446,7 @@ proper_opts([{on_output, MFStr} | T]) when is_list(MFStr) ->
         undefined -> proper_opts(T);
         Fun       -> [{on_output, Fun} | proper_opts(T)]
     end;
+proper_opts([{type, Type} | T]) -> [Type | proper_opts(T)];
 %% those are rebar3-only options
 proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
