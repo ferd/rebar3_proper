@@ -356,6 +356,12 @@ proper_opts() ->
       "each property tested shows its output or not (defaults to true)"},
      {cover, $c, "cover", {boolean, false},
       "generate cover data"},
+     {numworkers, $w, "workers", integer,
+      "number of workers to use when parallelizing property tests"},
+     {type, $t, "type", atom,
+      "this is only used when running parallel PropEr: indicates the "
+      "type of the property to test, it can either be \"pure\" when it is side-effect "
+      "and has no state, or \"impure\" when it does"},
      %% no short format for these buddies
      {retry, undefined, "retry", {boolean, false},
       "If failing test case counterexamples have been stored, "
@@ -390,7 +396,11 @@ proper_opts() ->
       "specifies a binary function '{Mod,Fun}', similar to io:format/2, "
       "to be used for all output printing"},
      {sys_config, undefined, "sys_config", string,
-      "config file to load before starting tests"}
+      "config file to load before starting tests"},
+     {stop_nodes, undefined, "stop_nodes", boolean,
+      "this is only used when running parallel PropEr: indicates whether "
+      "PropEr should restart the nodes for each impure property, "
+      "when testing them in parallel, or not"}
     ].
 
 handle_opts(State) ->
@@ -440,6 +450,7 @@ proper_opts([{on_output, MFStr} | T]) when is_list(MFStr) ->
         undefined -> proper_opts(T);
         Fun       -> [{on_output, Fun} | proper_opts(T)]
     end;
+proper_opts([{type, Type} | T]) -> [Type | proper_opts(T)];
 %% those are rebar3-only options
 proper_opts([{dir,_} | T]) -> proper_opts(T);
 proper_opts([{module,_} | T]) -> proper_opts(T);
