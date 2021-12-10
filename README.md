@@ -57,7 +57,7 @@ Then just call your plugin directly in an existing application:
       -n, --numtests      number of tests to run when testing a given property
       -s, --search_steps  number of searches to run when testing a given
                           targeted property
-      -v, --verbose       each propertie tested shows its output or not
+      -v, --verbose       each property tested shows its output or not
                           (defaults to true)
       -c, --cover         generate cover data [default: false]
       -w, --workers       number of workers to use when parallelizing property 

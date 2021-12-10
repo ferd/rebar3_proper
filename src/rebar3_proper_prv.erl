@@ -40,7 +40,7 @@ do(State) ->
     %% compile everything *after* cover-compiling has cleaned up after itself
     %% (which incidentally clears up *our* environment too), but skips reloading
     %% the top level apps' own code paths since those would overwrite the cover-
-    %% compiled code sitting in memory. The top app's path is readded to the
+    %% compiled code sitting in memory. The top app's path is re-added to the
     %% code path but not pre-loaded in memory, though.
     TopAppsPaths = app_paths(State),
     rebar_utils:update_code(rebar_state:code_paths(State, all_deps)--TopAppsPaths, [soft_purge]),
@@ -550,4 +550,3 @@ format_doc(Mod, Fun) ->
                             [Mod,Fun]),
             []
     end.
-
