@@ -81,7 +81,12 @@ do_quickcheck(State, Opts, ProperOpts) ->
             rebar_api:debug("properties: ~p", [Props]),
             Failed = [{Mod, Fun, Res, proper:counterexample()}
                       || {Mod, Fun} <- Props,
-                         Res <- [catch check(Mod, Fun, ProperOpts)],
+                         Res <- [try check(Mod, Fun, ProperOpts) of
+                                     V -> V
+                                 catch
+                                     throw:T -> T;
+                                     _:R -> {'EXIT', R}
+                                 end],
                          Res =/= true],
             rebar_api:debug("Failing Results: ~p", [Failed]),
             maybe_write_coverdata(State),
@@ -163,7 +168,12 @@ run_retries(State, Opts, ProperOpts, CounterExamples) ->
             Failed = [{M, F, Result, Args}
                       || {M,F,Args} <- CounterExamples,
                          lists:member({M,F}, Found),
-                         Result <- [catch retry(M, F, Args, ProperOpts)],
+                         Result <- [try retry(M, F, Args, ProperOpts) of
+                                        V -> V
+                                    catch
+                                        throw:T -> T;
+                                        _:R -> {'EXIT', R}
+                                    end],
                          Result =/= true],
             FailedCount = length(Failed),
             Passed = ExpectedLen - FailedCount,
